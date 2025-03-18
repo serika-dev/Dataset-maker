@@ -1249,16 +1249,16 @@ export default function Home() {
                 </p>
                 <ul className={styles.formatList}>
                   <li>
-                    <strong>OpenAI JSONL</strong>: Each line contains a JSON object with a "messages" array of role/content pairs
+                    <strong>OpenAI JSONL</strong>: Each line contains a JSON object with a &quot;messages&quot; array of role/content pairs
                   </li>
                   <li>
                     <strong>JSON Array</strong>: An array of messages with role/content pairs
                   </li>
                   <li>
-                    <strong>Custom JSON</strong>: JSON with "conversations" containing "human"/"gpt" pairs
+                    <strong>Custom JSON</strong>: JSON with &quot;conversations&quot; containing &quot;human&quot;/&quot;gpt&quot; pairs
                   </li>
                   <li>
-                    <strong>Input/Output Pairs</strong>: JSON array with "input_text" and "output_text" fields
+                    <strong>Input/Output Pairs</strong>: JSON array with &quot;input_text&quot; and &quot;output_text&quot; fields
                   </li>
                 </ul>
                 
