@@ -1,0 +1,871 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.header {
+  padding: 1rem 1.5rem;
+  background-color: var(--surface-dark);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--primary-light);
+  letter-spacing: -0.02em;
+}
+
+.exportButtons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.exportButton {
+  padding: 0.5rem 1rem;
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--rounded);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.exportButton:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 60px);
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 280px;
+  height: calc(100vh - 60px);
+  background-color: var(--surface-dark);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.sidebar h2 {
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding: 1.25rem 1rem 0.75rem 1rem;
+  margin: 0;
+}
+
+.conversationList {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem 1rem;
+  overflow-y: auto;
+  min-height: calc(100vh - 250px);
+}
+
+.conversationButton, 
+.activeConversation {
+  width: 100%;
+  margin-bottom: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--rounded-md);
+  background-color: var(--surface-color);
+  display: flex;
+  flex-direction: column;
+  transition: all var(--transition);
+}
+
+.conversationContent {
+  width: 100%;
+  text-align: left;
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+}
+
+.conversationButton:hover {
+  background-color: var(--surface-light);
+  border-color: var(--primary-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.activeConversation {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-light);
+  font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+
+.conversationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.messageCount {
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background-color: rgba(99, 102, 241, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--rounded);
+}
+
+.conversationPreview {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.newConversationButton {
+  margin: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--rounded-md);
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all var(--transition);
+}
+
+.newConversationButton:hover {
+  background-color: var(--primary-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.chatContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: calc(100vh - 60px);
+  overflow: hidden;
+  position: relative;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+  padding-bottom: calc(2rem + 80px);
+  height: 100%;
+}
+
+.messageTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 1rem;
+}
+
+.inputForm {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  position: fixed;
+  bottom: 0;
+  left: 280px;
+  right: 0;
+  width: auto;
+  z-index: 5;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  transition: left 0.3s ease;
+}
+
+/* Add a modifier class for when sidebar is hidden */
+:global([data-sidebar-hidden]) .inputForm {
+  left: 0;
+}
+
+.settings {
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  display: flex;
+  gap: 1rem;
+  z-index: 6;
+  position: relative;
+}
+
+.settingField {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settingField label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.labelIcon {
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.systemPromptInput, 
+.apiKeyInput {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: var(--surface-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--rounded);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: all var(--transition);
+}
+
+.systemPromptInput:focus, 
+.apiKeyInput:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.systemPromptInput::placeholder,
+.apiKeyInput::placeholder {
+  color: var(--text-muted);
+}
+
+.messageTable th,
+.messageTable td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.messageTable th {
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  padding-top: 0;
+  padding-bottom: 0.5rem;
+}
+
+.userRow {
+  background-color: var(--surface-color);
+  border-radius: var(--rounded-md);
+}
+
+.assistantRow {
+  background-color: var(--surface-dark);
+  border-radius: var(--rounded-md);
+}
+
+.messageText {
+  position: relative;
+  padding-right: 4rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.messageActions {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.messageText:hover .messageActions {
+  opacity: 1;
+}
+
+.editButton,
+.regenButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--rounded);
+  transition: all var(--transition);
+  opacity: 0.6;
+}
+
+.editButton:hover,
+.regenButton:hover {
+  opacity: 1;
+  background-color: var(--surface-dark);
+}
+
+.editButton:disabled,
+.regenButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+.regenButton {
+  font-size: 1rem;
+}
+
+.editContainer {
+  width: 100%;
+}
+
+.editTextarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 0.75rem;
+  background-color: var(--surface-light);
+  border: 1px solid var(--primary-light);
+  border-radius: var(--rounded);
+  color: var(--text-primary);
+  resize: vertical;
+  font-size: 0.875rem;
+  transition: all var(--transition);
+}
+
+.editTextarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.editButtons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.editButtons button {
+  padding: 0.5rem 1rem;
+  border-radius: var(--rounded);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.editButtons button:first-child {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+}
+
+.editButtons button:first-child:hover {
+  background-color: var(--primary-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.editButtons button:last-child {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+}
+
+.editButtons button:last-child:hover {
+  background-color: var(--surface-light);
+}
+
+.messageInput {
+  flex: 1;
+  padding: 0.875rem 1rem;
+  background-color: var(--surface-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--rounded-md);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  resize: none;
+  min-height: 3rem;
+  max-height: 150px;
+  overflow-y: auto;
+  line-height: 1.5;
+  transition: all var(--transition);
+}
+
+.messageInput:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.sendButton {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--rounded-md);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.sendButton:hover:not(:disabled) {
+  background-color: var(--primary-light);
+  transform: translateY(-1px);
+}
+
+.sendButton:disabled {
+  background-color: var(--surface-light);
+  cursor: not-allowed;
+}
+
+.logoIcon,
+.userIcon,
+.assistantIcon {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.conversationTime {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.emptyMessages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 200px;
+  padding: 2rem;
+  color: var(--text-secondary);
+  text-align: center;
+  background-color: var(--surface-color);
+  border-radius: var(--rounded-lg);
+  margin: 1rem;
+}
+
+.emptyMessagesIcon {
+  font-size: 3rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.emptyMessages h3 {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.speaker {
+  min-width: 30px;
+  text-align: center;
+}
+
+.speakerIcon {
+  font-size: 1.25rem;
+}
+
+.messageTime {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.loadingText {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.loadingDot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--text-muted);
+  border-radius: 50%;
+  animation: loadingDotBounce 1.4s infinite ease-in-out both;
+}
+
+.loadingDot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loadingDot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes loadingDotBounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.menuButton {
+  background-color: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.5rem;
+  border-radius: var(--rounded);
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menuButton:hover {
+  color: var(--primary-light);
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.editedIndicator {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+  font-style: italic;
+}
+
+.conversationActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.deleteConvoButton,
+.deleteButton {
+  background-color: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.375rem;
+  border-radius: var(--rounded);
+  opacity: 0.7;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.conversationButton:hover .deleteConvoButton,
+.activeConversation:hover .deleteConvoButton {
+  opacity: 1;
+}
+
+.deleteConvoButton:hover,
+.deleteButton:hover {
+  color: var(--error-color);
+  background-color: rgba(239, 68, 68, 0.1);
+  transform: scale(1.1);
+}
+
+.messageActions {
+  width: 40px;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  background-color: var(--surface-color);
+  border-radius: var(--rounded-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-lg);
+  max-width: 90%;
+  width: 420px;
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modalTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.modalText {
+  margin-bottom: 1.5rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.modalButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.deleteConfirmButton,
+.cancelButton {
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--rounded-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.deleteConfirmButton {
+  background-color: var(--error-color);
+  color: white;
+  border: none;
+}
+
+.deleteConfirmButton:hover {
+  background-color: rgba(239, 68, 68, 0.9);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.cancelButton {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.cancelButton:hover {
+  background-color: var(--surface-light);
+}
+
+.envKeyIndicator {
+  font-size: 0.75rem;
+  color: var(--accent-light);
+  font-style: italic;
+  margin-left: 0.5rem;
+  background-color: rgba(16, 185, 129, 0.1);
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--rounded);
+}
+
+.modalContent {
+  margin-bottom: 1.5rem;
+}
+
+.fileUploadContainer {
+  margin: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fileInputLabel {
+  padding: 1.5rem;
+  background-color: var(--surface-dark);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--rounded-md);
+  color: var(--text-primary);
+  width: 100%;
+  transition: all var(--transition);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.fileInputLabel:hover {
+  border-color: var(--primary-light);
+  background-color: rgba(99, 102, 241, 0.05);
+}
+
+.uploadIcon {
+  font-size: 2rem;
+  color: var(--text-muted);
+}
+
+.uploadText {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileInput {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.supportedFormats {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.importOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.radioLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.radioLabel input[type="radio"] {
+  margin: 0;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+}
+
+.radioLabel input[type="radio"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.radioLabel:has(input[type="radio"]:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.primaryButton {
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--rounded-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background-color: var(--primary-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.formatList {
+  list-style-type: none;
+  padding: 0;
+  margin: 0 0 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formatList li {
+  position: relative;
+  padding-left: 1.25rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.formatList li::before {
+  content: "•";
+  position: absolute;
+  left: 0.25rem;
+  color: var(--primary-light);
+  font-weight: bold;
+}
+
+.formatList strong {
+  color: var(--text-primary);
+  font-weight: 500;
+} 
