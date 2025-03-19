@@ -16,43 +16,96 @@ function formatPrivateKey(privateKey) {
     console.log(`Private key contains literal '\\n'? ${privateKey.includes('\\n')}`);
     console.log(`Private key contains actual newlines? ${privateKey.includes('\n')}`);
     
-    // If the key already contains proper newlines, return it as is
+    // The key needs to be processed differently based on its format
+    let formattedKey = privateKey;
+    
+    // If the key already has proper newlines, return it as is
     if (privateKey.includes('-----BEGIN PRIVATE KEY-----\n')) {
       console.log('Private key already has correct formatting');
       return privateKey;
     }
     
-    // Replace literal '\n' strings with actual newlines
-    privateKey = privateKey.replace(/\\n/g, '\n');
+    // For Coolify: If the key doesn't have literal '\n' or real newlines,
+    // we need to add newlines at the right positions
+    if (!privateKey.includes('\\n') && !privateKey.includes('\n')) {
+      console.log('Coolify format detected - adding newlines to the raw key');
+      
+      // Split the key into chunks of 64 characters as per PEM format
+      const header = '-----BEGIN PRIVATE KEY-----';
+      const footer = '-----END PRIVATE KEY-----';
+      
+      // Extract the base64 part (remove header and footer)
+      let base64Part = privateKey
+        .replace(header, '')
+        .replace(footer, '')
+        .trim();
+      
+      // Split into 64-character chunks and join with newlines
+      const chunks = [];
+      for (let i = 0; i < base64Part.length; i += 64) {
+        chunks.push(base64Part.substring(i, i + 64));
+      }
+      
+      // Reassemble the key with proper PEM format
+      formattedKey = `${header}\n${chunks.join('\n')}\n${footer}`;
+      console.log('Formatted key for Coolify environment');
+      return formattedKey;
+    }
     
-    // If the private key doesn't have the proper header/footer with newlines, add them
-    if (!privateKey.startsWith('-----BEGIN PRIVATE KEY-----\n')) {
-      privateKey = privateKey.replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n');
+    // If the key has literal '\n' strings, replace them with actual newlines
+    if (privateKey.includes('\\n')) {
+      formattedKey = privateKey.replace(/\\n/g, '\n');
+      console.log('Replaced literal \\n with actual newlines');
+    }
+    
+    // Ensure proper newlines after BEGIN and before END
+    if (!formattedKey.startsWith('-----BEGIN PRIVATE KEY-----\n')) {
+      formattedKey = formattedKey.replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n');
       console.log('Added newline after BEGIN PRIVATE KEY');
     }
     
-    if (!privateKey.endsWith('\n-----END PRIVATE KEY-----') && !privateKey.endsWith('\n-----END PRIVATE KEY-----\n')) {
-      privateKey = privateKey.replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----');
+    if (!formattedKey.endsWith('\n-----END PRIVATE KEY-----') && !formattedKey.endsWith('\n-----END PRIVATE KEY-----\n')) {
+      formattedKey = formattedKey.replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----');
       console.log('Added newline before END PRIVATE KEY');
     }
     
-    return privateKey;
+    return formattedKey;
   } catch (error) {
     console.error('Error formatting private key:', error);
     throw new Error('Failed to format private key: ' + error.message);
   }
 }
 
+// For debugging Coolify environment issues
+console.log('Initializing Google Sheets API...');
+console.log(`Client email defined: ${Boolean(process.env.GOOGLE_SHEETS_CLIENT_EMAIL)}`);
+console.log(`Private key defined: ${Boolean(process.env.GOOGLE_SHEETS_PRIVATE_KEY)}`);
+console.log(`Project ID defined: ${Boolean(process.env.GOOGLE_SHEETS_PROJECT_ID)}`);
+console.log(`Sheet ID defined: ${Boolean(process.env.GOOGLE_SHEETS_SHEET_ID)}`);
+
 // Initialize Google Sheets API
-const auth = new google.auth.GoogleAuth({
-  credentials: {
-    client_email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
-    // Use the utility function to format the private key
-    private_key: formatPrivateKey(process.env.GOOGLE_SHEETS_PRIVATE_KEY),
-    project_id: process.env.GOOGLE_SHEETS_PROJECT_ID,
-  },
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
+let auth;
+try {
+  const privateKey = formatPrivateKey(process.env.GOOGLE_SHEETS_PRIVATE_KEY);
+  
+  auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+      private_key: privateKey,
+      project_id: process.env.GOOGLE_SHEETS_PROJECT_ID,
+    },
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+  console.log('Google Auth initialized successfully');
+} catch (error) {
+  console.error('Error initializing Google Auth:', error);
+  // Create a placeholder auth that will throw a more informative error when used
+  auth = {
+    getClient: () => {
+      throw new Error(`Failed to initialize Google Auth: ${error.message}`);
+    }
+  };
+}
 
 const sheets = google.sheets({ version: 'v4', auth });
 const SPREADSHEET_ID = '1VxAfyQ5fwr6PUU56i2JqPo7C3NOs-gjMu1ZWmIo7PDo';

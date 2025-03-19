@@ -43,13 +43,22 @@ GOOGLE_SHEETS_SHEET_ID=your_sheet_id
 
 **Important Note for Google Sheets Private Key:**
 
-When using the application in production environments (like Coolify), pay special attention to the `GOOGLE_SHEETS_PRIVATE_KEY` format:
+When using the application in different environments, the format of the `GOOGLE_SHEETS_PRIVATE_KEY` varies:
 
+### For Local Development
+When using `.env.local` file:
 1. The key must be enclosed in double quotes
 2. Newlines must be represented as `\n` characters
-3. Make sure the key starts with `-----BEGIN PRIVATE KEY-----\n` and ends with `\n-----END PRIVATE KEY-----`
+3. Format should be: `"-----BEGIN PRIVATE KEY-----\nBase64Key\n-----END PRIVATE KEY-----"`
 
-If you're experiencing the error `error:1E08010C:DECODER routines::unsupported`, it means the private key format is incorrect. Check that your environment variable has the proper newline characters.
+### For Coolify
+When using Coolify environment variables:
+1. Enter the raw key value without quotes
+2. Do not use `\n` for newlines
+3. Paste the key as a single line with the header and footer included
+4. Format should be: `-----BEGIN PRIVATE KEY-----MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgw...Base64Key...END PRIVATE KEY-----`
+
+The application is configured to handle these different formats automatically. If you're experiencing the error `error:1E08010C:DECODER routines::unsupported`, check that your environment variable is set up correctly for your specific deployment platform.
 
 ## Usage
 
