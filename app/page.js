@@ -26,6 +26,173 @@ export default function Home() {
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [submitterName, setSubmitterName] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
+  const [apiEndpoint, setApiEndpoint] = useState('https://api.openai.com/v1');
+  const [isCustomEndpoint, setIsCustomEndpoint] = useState(false);
+  const [availableModels, setAvailableModels] = useState([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [isOpenRouter, setIsOpenRouter] = useState(false);
+  const [customOpenRouterModel, setCustomOpenRouterModel] = useState('');
+
+  // Helper function to check if model is custom
+  const isCustomModel = (model) => {
+    return model === 'custom' || 
+      model.toString().toLowerCase().trim() === 'custom' ||
+      model === 'other' ||
+      model.toString().toLowerCase().trim() === 'other';
+  };
+
+  // Load settings from localStorage
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('settings');
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        if (parsed.systemPrompt) setSystemPrompt(parsed.systemPrompt);
+        
+        // Don't load 'invalid-api-key' as a valid model
+        if (parsed.selectedModel && parsed.selectedModel !== 'invalid-api-key') {
+          setSelectedModel(parsed.selectedModel);
+        }
+        
+        if (parsed.apiEndpoint) setApiEndpoint(parsed.apiEndpoint);
+        if (parsed.isCustomEndpoint !== undefined) setIsCustomEndpoint(parsed.isCustomEndpoint);
+        if (parsed.isOpenRouter !== undefined) setIsOpenRouter(parsed.isOpenRouter);
+        if (parsed.customOpenRouterModel) setCustomOpenRouterModel(parsed.customOpenRouterModel);
+        if (parsed.apiKey) setApiKey(parsed.apiKey);
+      } catch (error) {
+        console.error('Error loading saved settings:', error);
+      }
+    }
+  }, []);
+
+  // Save settings to localStorage
+  const saveSettings = () => {
+    // If invalid API key is selected, prompt the user to fix it
+    if (selectedModel === 'invalid-api-key') {
+      alert('Please enter a valid API key or select a different model.');
+      return;
+    }
+
+    // If OpenRouter is selected but no API key provided, show error
+    if (isOpenRouter && !apiKey.trim()) {
+      alert('OpenRouter requires an API key. Please enter your API key or switch to OpenAI.');
+      return;
+    }
+    
+    // If user selected custom model but didn't enter a value
+    if (isOpenRouter && isCustomModel(selectedModel) && !customOpenRouterModel.trim()) {
+      alert('Please enter an other model identifier or select a pre-defined model.');
+      return;
+    }
+
+    try {
+      localStorage.setItem('settings', JSON.stringify({
+        systemPrompt,
+        apiKey,
+        selectedModel,
+        apiEndpoint,
+        isCustomEndpoint,
+        isOpenRouter,
+        customOpenRouterModel
+      }));
+      
+      setShowSettingsModal(false);
+      
+      // Refetch models in case API key or endpoint changed
+      fetchAvailableModels();
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert('Failed to save settings. Please try again.');
+    }
+  };
+
+  // Fetch available models from the appropriate API
+  const fetchAvailableModels = async () => {
+    setIsLoadingModels(true);
+    try {
+      // Determine API endpoint based on settings
+      const endpoint = isOpenRouter 
+        ? 'https://openrouter.ai/api/v1'
+        : (isCustomEndpoint ? apiEndpoint : 'https://api.openai.com/v1');
+      
+      const response = await fetch('/api/models', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          apiKey, // This can be empty for OpenAI, server will use env variable
+          apiEndpoint: endpoint,
+          isOpenRouter
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch models');
+      }
+      
+      const data = await response.json();
+      
+      // If the API returns an empty list or error, show appropriate message
+      if (!data.models || data.models.length === 0) {
+        if (isOpenRouter) {
+          // For OpenRouter, always show custom option
+          setAvailableModels([{ id: 'custom' }]);
+        } else {
+          // For OpenAI, show an "Invalid API key" option
+          setAvailableModels([{ id: 'invalid-api-key' }]);
+        }
+        return;
+      }
+      
+      // Filter models based on API type
+      let filteredModels;
+      
+      if (isOpenRouter) {
+        // For OpenRouter, ensure custom option is included
+        const hasCustomOption = data.models.some(model => model.id === 'custom');
+        filteredModels = hasCustomOption 
+          ? data.models 
+          : [...data.models, { id: 'custom' }];
+      } else {
+        // For OpenAI API, apply regular filtering
+        filteredModels = data.models.filter(model => {
+          // When using a custom API key, show all GPT models
+          if (apiKey) return model.id.startsWith('gpt-');
+          
+          // When using environment API key, filter out restricted models
+          return !model.id.includes('gpt-4.5') && 
+                !model.id.toLowerCase().includes('realtime') &&
+                !model.id.toLowerCase().includes('search') &&
+                !model.id.toLowerCase().includes('audio') &&
+                model.id.startsWith('gpt-');
+        });
+      }
+      
+      // Ensure we have at least one model option
+      if (filteredModels.length === 0) {
+        if (isOpenRouter) {
+          filteredModels = [{ id: 'custom' }];
+        } else {
+          filteredModels = [{ id: 'invalid-api-key' }];
+        }
+      }
+      
+      setAvailableModels(filteredModels);
+    } catch (error) {
+      console.error('Error fetching models:', error);
+      // Show appropriate error state
+      if (isOpenRouter) {
+        setAvailableModels([{ id: 'custom' }]);
+      } else {
+        setAvailableModels([{ id: 'invalid-api-key' }]);
+      }
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
 
   // Add mobile detection
   useEffect(() => {
@@ -88,10 +255,40 @@ export default function Home() {
       });
   }, []);
 
+  // Add a side effect to load models when the settings modal is shown
+  useEffect(() => {
+    if (showSettingsModal) {
+      fetchAvailableModels();
+    }
+  }, [showSettingsModal, apiKey, apiEndpoint, isCustomEndpoint]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!message.trim()) return;
+
+    // Check if invalid API key is selected
+    if (selectedModel === 'invalid-api-key') {
+      alert('Please enter a valid API key in settings.');
+      return;
+    }
+
+    // Check if OpenRouter is selected but no API key is provided
+    if (isOpenRouter && !apiKey.trim()) {
+      alert('OpenRouter requires an API key. Please enter your API key in settings.');
+      return;
+    }
+    
+    // Check if OpenRouter custom model is selected but empty
+    if (isOpenRouter && isCustomModel(selectedModel) && !customOpenRouterModel.trim()) {
+      alert('Please enter an other model identifier in settings.');
+      return;
+    }
+
+    // Only check for restricted models when using env API key
+    if (!isOpenRouter && !apiKey && selectedModel.includes('gpt-4.5')) {
+      alert('GPT-4.5 models are restricted and cannot be used with the environment API key. Please select a different model in Settings.');
+      return;
+    }
     
     // Add user message to conversation
     const userMessage = { 
@@ -122,6 +319,9 @@ export default function Home() {
           messages,
           systemPrompt,
           apiKey, // This can be empty, and the server will use env variable
+          model: isOpenRouter && isCustomModel(selectedModel) ? customOpenRouterModel : selectedModel,
+          apiEndpoint: isCustomEndpoint || isOpenRouter ? apiEndpoint : undefined,
+          isOpenRouter
         }),
       });
       
@@ -213,8 +413,8 @@ export default function Home() {
   };
 
   const startEditingMessage = (message) => {
-    setEditingMessageId(message.id);
-    setEditedContent(message.content);
+      setEditingMessageId(message.id);
+      setEditedContent(message.content);
   };
 
   const saveEditedMessage = () => {
@@ -827,14 +1027,16 @@ export default function Home() {
         }
         
         // Display success message
-        const totalConvos = newConversations.length + Object.values(groupedData).filter(items => 
-          conversations.some(c => c.id === items[0].id)
-        ).length;
-        
+        const totalConvos = newConversations.length + 
+          Object.values(groupedData)
+            .filter(items => conversations.some(c => c.id === items[0].id))
+            .length;
+
         const totalMessages = newConversations.reduce((sum, convo) => sum + convo.messages.length, 0) + 
-          Object.values(groupedData).filter(items => 
-            conversations.some(c => c.id === items[0].id)
-          ).flat().reduce((sum, item) => sum + item.messages.filter(m => m.role !== 'system').length, 0);
+          Object.values(groupedData)
+            .filter(items => conversations.some(c => c.id === items[0].id))
+            .flat()
+            .reduce((sum, item) => sum + item.messages.filter(m => m.role !== 'system').length, 0);
         
         if (totalConvos > 0) {
           alert(`Import successful! ${
@@ -903,7 +1105,37 @@ export default function Home() {
 
   // Add regenerate message function
   const regenerateMessage = async (assistantMessageId) => {
-    // Find the assistant message and the preceding user message
+    setRegeneratingMessageId(assistantMessageId);
+
+    // Check if invalid API key is selected
+    if (selectedModel === 'invalid-api-key') {
+      alert('Please enter a valid API key in settings.');
+      setRegeneratingMessageId(null);
+      return;
+    }
+
+    // Check if OpenRouter is selected but no API key is provided
+    if (isOpenRouter && !apiKey.trim()) {
+      alert('OpenRouter requires an API key. Please enter your API key in settings.');
+      setRegeneratingMessageId(null);
+      return;
+    }
+
+    // Check if OpenRouter custom model is selected but empty
+    if (isOpenRouter && isCustomModel(selectedModel) && !customOpenRouterModel.trim()) {
+      alert('Please enter an other model identifier in settings.');
+      setRegeneratingMessageId(null);
+      return;
+    }
+
+    // Only check for restricted models when using env API key
+    if (!isOpenRouter && !apiKey && selectedModel.includes('gpt-4.5')) {
+      alert('GPT-4.5 models are restricted and cannot be used with the environment API key. Please select a different model in Settings.');
+      setRegeneratingMessageId(null);
+      return;
+    }
+
+    // Find the assistant message to regenerate
     const currentConvo = conversations.find(c => c.id === currentConversationId);
     if (!currentConvo) return;
 
@@ -913,7 +1145,6 @@ export default function Home() {
     const userMessage = currentConvo.messages[assistantIndex - 1];
     if (userMessage.role !== 'user') return;
 
-    setRegeneratingMessageId(assistantMessageId);
     setIsLoading(true);
 
     try {
@@ -932,6 +1163,9 @@ export default function Home() {
           messages,
           systemPrompt,
           apiKey,
+          model: isOpenRouter && isCustomModel(selectedModel) ? customOpenRouterModel : selectedModel,
+          apiEndpoint: isCustomEndpoint || isOpenRouter ? apiEndpoint : undefined,
+          isOpenRouter
         }),
       });
 
@@ -1002,17 +1236,23 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(result.error || 'Failed to export to Google Sheets');
       }
-
-      // Show success message
-      alert(`Successfully exported ${result.updatedRows || 'data'} to Google Sheets!`);
       
-      // Close modals
+      // Close modals first (better UX than showing alert while modal is open)
       setShowExportModal(false);
       setShowNamePrompt(false);
       setSubmitterName('');
+      
+      // Show success message after modals are closed
+      setTimeout(() => {
+        alert(`Successfully exported ${result.updatedRows || 'data'} to Google Sheets!`);
+      }, 100);
     } catch (error) {
       console.error('Error exporting to Google Sheets:', error);
-      alert('Error exporting to Google Sheets: ' + error.message);
+      
+      // Show error message
+      setTimeout(() => {
+        alert('Error exporting to Google Sheets: ' + error.message);
+      }, 100);
     } finally {
       // Reset loading state
       setIsExporting(false);
@@ -1033,9 +1273,16 @@ export default function Home() {
           <h1>
             <span className={styles.logoIcon}>✨</span> 
             {isMobile ? 'Rayen AI' : 'Rayen AI Training Data'}
-          </h1>
+        </h1>
         </div>
         <div className={styles.exportButtons}>
+          <button 
+            className={styles.exportButton} 
+            onClick={() => setShowSettingsModal(true)}
+            aria-label="Settings"
+          >
+            <span>⚙️</span> {!isMobile && 'Settings'}
+          </button>
           <button 
             className={styles.exportButton} 
             onClick={openImportModal}
@@ -1050,7 +1297,7 @@ export default function Home() {
           </button>
         </div>
       </header>
-      
+
       <main className={styles.main}>
         {isSidebarVisible && (
           <aside className={styles.sidebar}>
@@ -1058,7 +1305,7 @@ export default function Home() {
               <span className={styles.sidebarIcon}>💬</span> 
               Conversations
             </h2>
-            <div className={styles.conversationList}>
+          <div className={styles.conversationList}>
               {conversations.map(conversation => (
                 <div 
                   key={conversation.id}
@@ -1075,8 +1322,8 @@ export default function Home() {
                         setIsSidebarVisible(false);
                       }
                     }}
-                  >
-                    <div className={styles.conversationHeader}>
+              >
+                <div className={styles.conversationHeader}>
                       <span>Conversation {conversation.id}</span>
                       <div className={styles.conversationActions}>
                         <span className={styles.messageCount}>
@@ -1093,17 +1340,17 @@ export default function Home() {
                           🗑️
                         </button>
                       </div>
-                    </div>
-                    <div className={styles.conversationPreview}>
+                </div>
+                <div className={styles.conversationPreview}>
                       {getConversationPreview(conversation)}
-                    </div>
-                    <div className={styles.conversationTime}>
+                </div>
+                  <div className={styles.conversationTime}>
                       {conversation.createdAt || getFormattedDate()}
-                    </div>
+                  </div>
                   </div>
                 </div>
-              ))}
-            </div>
+            ))}
+          </div>
             <button 
               className={styles.newConversationButton} 
               onClick={() => {
@@ -1114,50 +1361,11 @@ export default function Home() {
               }}
             >
               <span>➕</span> New Conversation
-            </button>
+          </button>
           </aside>
         )}
-        
+
         <div className={styles.chatContainer}>
-          <div className={styles.settings}>
-            <div className={styles.settingField}>
-              <label htmlFor="systemPrompt">
-                <span className={styles.labelIcon}>⚙️</span> System Prompt
-              </label>
-              <input
-                id="systemPrompt"
-                type="text"
-                className={styles.systemPromptInput}
-                placeholder="Define the assistant's behavior..."
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-              />
-            </div>
-            <div className={styles.settingField}>
-              <label htmlFor="apiKey">
-                <span className={styles.labelIcon}>🔑</span> OpenAI API Key
-                {usingEnvApiKey && (
-                  <span className={styles.envKeyIndicator} title="Using API key from environment (.env.local)">
-                    (Using .env.local)
-                  </span>
-                )}
-              </label>
-              <input
-                id="apiKey"
-                type="password"
-                className={styles.apiKeyInput}
-                placeholder="Leave empty to use key from .env.local"
-                value={apiKey}
-                onChange={(e) => {
-                  setApiKey(e.target.value);
-                  if (e.target.value.trim()) {
-                    setUsingEnvApiKey(false);
-                  }
-                }}
-              />
-            </div>
-          </div>
-          
           <div className={styles.messages}>
             {currentConversation && currentConversation.messages.length > 0 ? (
               <table className={styles.messageTable}>
@@ -1176,9 +1384,9 @@ export default function Home() {
                       className={msg.role === 'user' ? styles.userRow : styles.assistantRow}
                     >
                       <td className={styles.speaker}>
-                        <span className={styles.speakerIcon}>
-                          {msg.role === 'user' ? '👤' : '🤖'}
-                        </span>
+                          <span className={styles.speakerIcon}>
+                            {msg.role === 'user' ? '👤' : '🤖'}
+                          </span>
                       </td>
                       <td>
                         {editingMessageId === msg.id ? (
@@ -1256,7 +1464,7 @@ export default function Home() {
               </div>
             )}
           </div>
-          
+
           <form className={styles.inputForm} onSubmit={handleSubmit}>
             <textarea
               id="messageInput"
@@ -1431,8 +1639,10 @@ export default function Home() {
                   <button 
                     className={styles.exportOptionButton}
                     onClick={() => {
-                      exportConversations();
                       setShowExportModal(false);
+                      setTimeout(() => {
+                        exportConversations();
+                      }, 100);
                     }}
                   >
                     <span>📄</span> Export as JSONL
@@ -1440,8 +1650,10 @@ export default function Home() {
                   <button 
                     className={styles.exportOptionButton}
                     onClick={() => {
-                      exportJSON();
                       setShowExportModal(false);
+                      setTimeout(() => {
+                        exportJSON();
+                      }, 100);
                     }}
                   >
                     <span>⚙️</span> Export JSON
@@ -1449,8 +1661,10 @@ export default function Home() {
                   <button 
                     className={styles.exportOptionButton}
                     onClick={() => {
-                      exportCSV();
                       setShowExportModal(false);
+                      setTimeout(() => {
+                        exportCSV();
+                      }, 100);
                     }}
                   >
                     <span>📊</span> Export CSV
@@ -1512,6 +1726,185 @@ export default function Home() {
                     setSubmitterName('');
                   }}
                   disabled={isExporting}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings modal */}
+        {showSettingsModal && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modal}>
+              <h3 className={styles.modalTitle}>
+                Settings
+              </h3>
+              <div className={styles.modalContent}>
+                <div className={styles.settingsGroup}>
+                  <label htmlFor="systemPrompt" className={styles.settingsLabel}>
+                    System Prompt
+                  </label>
+                  <textarea
+                    id="systemPrompt"
+                    className={styles.settingsTextarea}
+                    placeholder="Define the assistant's behavior..."
+                    value={systemPrompt}
+                    onChange={(e) => setSystemPrompt(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+                
+                <div className={styles.settingsGroup}>
+                  <label htmlFor="selectedModel" className={styles.settingsLabel}>
+                    Model
+                  </label>
+                  <select
+                    id="selectedModel"
+                    className={styles.settingsSelect}
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    disabled={isLoadingModels}
+                  >
+                    {isLoadingModels ? (
+                      <option value="">Loading models...</option>
+                    ) : availableModels.length > 0 ? (
+                      availableModels.map(model => (
+                        <option key={model.id} value={model.id}>
+                          {model.id === 'custom' ? 'Other...' : 
+                           model.id === 'invalid-api-key' ? 'Invalid API Key' : 
+                           model.id}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">No models available</option>
+                    )}
+                  </select>
+                  {selectedModel === 'invalid-api-key' && (
+                    <div className={styles.modelWarning}>
+                      Unable to fetch models. Please check your API key or try again later.
+                    </div>
+                  )}
+                  {!apiKey && selectedModel.includes('gpt-4.5') && (
+                    <div className={styles.modelWarning}>
+                      GPT-4.5 models are restricted when using the environment API key.
+                    </div>
+                  )}
+                </div>
+                
+                {/* Custom model input field that appears when "Other..." is selected */}
+                {console.log('Debug - selectedModel:', selectedModel, 'isOpenRouter:', isOpenRouter, 'Type:', typeof selectedModel)}
+                {isOpenRouter && 
+                  (selectedModel === 'custom' || 
+                   selectedModel.toString().toLowerCase().trim() === 'custom' ||
+                   selectedModel === 'other' ||
+                   selectedModel.toString().toLowerCase().trim() === 'other') && (
+                  <div className={styles.settingsGroup}>
+                    <label htmlFor="customOpenRouterModel" className={styles.settingsLabel}>
+                      Other Model Identifier
+                    </label>
+                    <input
+                      id="customOpenRouterModel"
+                      type="text"
+                      className={styles.settingsInput}
+                      placeholder="e.g. anthropic/claude-3-opus-20240229"
+                      value={customOpenRouterModel}
+                      onChange={(e) => setCustomOpenRouterModel(e.target.value)}
+                    />
+                    <div className={styles.settingHint}>
+                      Enter a valid OpenRouter model identifier, including the provider prefix
+                    </div>
+                  </div>
+                )}
+                
+                <div className={styles.settingsGroup}>
+                  <label className={styles.settingsLabel}>
+                    {isOpenRouter ? 'OpenRouter API Key' : 'OpenAI API Key'}
+                    {!isOpenRouter && usingEnvApiKey && <span className={styles.envKeyIndicator}>Using ENV</span>}
+                  </label>
+                  <input
+                    type="password"
+                    className={styles.settingsInput}
+                    placeholder={isOpenRouter ? "Your OpenRouter API Key (required)" : "Your OpenAI API Key (optional if set in env)"}
+                    value={apiKey}
+                    onChange={(e) => {
+                      setApiKey(e.target.value);
+                      if (e.target.value.trim()) {
+                        setUsingEnvApiKey(false);
+                      }
+                    }}
+                  />
+                  {isOpenRouter && (
+                    <div className={styles.modelWarning}>
+                      OpenRouter requires an API key. Environment variables are not supported.
+                    </div>
+                  )}
+                </div>
+                
+                <div className={styles.settingsGroup}>
+                  <label className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={isOpenRouter}
+                      onChange={(e) => {
+                        setIsOpenRouter(e.target.checked);
+                        if (e.target.checked) {
+                          setApiEndpoint('https://openrouter.ai/api/v1');
+                          setIsCustomEndpoint(false);
+                        } else {
+                          setApiEndpoint('https://api.openai.com/v1');
+                        }
+                      }}
+                    />
+                    Use OpenRouter API
+                  </label>
+                  {isOpenRouter && (
+                    <div className={styles.settingHint}>
+                      OpenRouter provides access to various LLMs through a unified API
+                    </div>
+                  )}
+                </div>
+                
+                {!isOpenRouter && (
+                  <div className={styles.settingsGroup}>
+                    <label className={styles.checkboxLabel}>
+                      <input
+                        type="checkbox"
+                        checked={isCustomEndpoint}
+                        onChange={(e) => setIsCustomEndpoint(e.target.checked)}
+                      />
+                      Use custom API endpoint
+                    </label>
+                  </div>
+                )}
+                
+                {isCustomEndpoint && (
+                  <div className={styles.settingsGroup}>
+                    <label htmlFor="apiEndpoint" className={styles.settingsLabel}>
+                      API Endpoint URL
+                    </label>
+                    <input
+                      id="apiEndpoint"
+                      type="text"
+                      className={styles.settingsInput}
+                      placeholder="https://api.openai.com/v1"
+                      value={apiEndpoint}
+                      onChange={(e) => setApiEndpoint(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+              <div className={styles.modalButtons}>
+                <button 
+                  className={styles.primaryButton}
+                  onClick={saveSettings}
+                >
+                  Save
+                </button>
+                <button 
+                  className={styles.cancelButton}
+                  onClick={() => setShowSettingsModal(false)}
                 >
                   Cancel
                 </button>

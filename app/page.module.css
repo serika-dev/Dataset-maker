@@ -789,6 +789,85 @@
   text-align: center;
 }
 
+.settingsGroup {
+  margin-bottom: 1.25rem;
+}
+
+.settingsLabel {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.settingsTextarea,
+.settingsInput,
+.settingsSelect {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: var(--surface-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--rounded);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: all var(--transition);
+}
+
+.settingsTextarea:focus,
+.settingsInput:focus,
+.settingsSelect:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.settingsTextarea::placeholder,
+.settingsInput::placeholder {
+  color: var(--text-muted);
+}
+
+.settingsTextarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.modelWarning {
+  color: #e63946;
+  background-color: #f8d7da;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+  border-radius: var(--rounded);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-left: 3px solid #e63946;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.checkboxLabel input[type="checkbox"] {
+  margin: 0;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+}
+
+.settingHint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  margin-left: 1.75rem;
+  font-style: italic;
+}
+
 .importOptions {
   display: flex;
   flex-direction: column;
