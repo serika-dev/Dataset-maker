@@ -9,7 +9,7 @@ A Next.js application for collecting AI conversation data to fine-tune language 
 - Edit AI responses
 - Organize conversations with conversation IDs
 - Format data in a style compatible with fine-tuning datasets
-- Export conversations as CSV or JSON for model fine-tuning
+- Export conversations as CSV, JSON, or directly to Google Sheets for model fine-tuning
 - Auto-save conversations in your browser for persistence
 
 ## Getting Started
@@ -19,11 +19,37 @@ A Next.js application for collecting AI conversation data to fine-tune language 
    ```
    npm install
    ```
-3. Run the development server:
+3. Set up environment variables (see Environment Variables section below)
+4. Run the development server:
    ```
    npm run dev
    ```
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Environment Variables
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```
+# OpenAI API (optional - users can provide their own key in the UI)
+OPENAI_API_KEY=your_openai_api_key
+
+# Google Sheets API (required for Google Sheets export)
+GOOGLE_SHEETS_CLIENT_EMAIL=your_service_account_email@example.com
+GOOGLE_SHEETS_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key with \n for newlines\n-----END PRIVATE KEY-----"
+GOOGLE_SHEETS_PROJECT_ID=your_google_project_id
+GOOGLE_SHEETS_SHEET_ID=your_sheet_id
+```
+
+**Important Note for Google Sheets Private Key:**
+
+When using the application in production environments (like Coolify), pay special attention to the `GOOGLE_SHEETS_PRIVATE_KEY` format:
+
+1. The key must be enclosed in double quotes
+2. Newlines must be represented as `\n` characters
+3. Make sure the key starts with `-----BEGIN PRIVATE KEY-----\n` and ends with `\n-----END PRIVATE KEY-----`
+
+If you're experiencing the error `error:1E08010C:DECODER routines::unsupported`, it means the private key format is incorrect. Check that your environment variable has the proper newline characters.
 
 ## Usage
 
@@ -32,7 +58,7 @@ A Next.js application for collecting AI conversation data to fine-tune language 
 3. Start chatting with the AI
 4. Create new conversations or switch between existing ones
 5. Edit AI responses by clicking on them
-6. Export your data in CSV or JSON format for fine-tuning
+6. Export your data in CSV, JSON, or directly to Google Sheets
 
 ## Data Format
 
