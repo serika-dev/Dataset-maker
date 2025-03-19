@@ -34,6 +34,7 @@ export default function Home() {
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isOpenRouter, setIsOpenRouter] = useState(false);
   const [customOpenRouterModel, setCustomOpenRouterModel] = useState('');
+  const [modelError, setModelError] = useState('');
 
   // Helper function to check if model is custom
   const isCustomModel = (model) => {
@@ -75,6 +76,14 @@ export default function Home() {
       return;
     }
 
+    // If there's an API error, make the user aware
+    if (modelError) {
+      const confirmSave = window.confirm(`There was an error with your API settings: "${modelError}". Do you still want to save these settings?`);
+      if (!confirmSave) {
+        return;
+      }
+    }
+
     // If OpenRouter is selected but no API key provided, show error
     if (isOpenRouter && !apiKey.trim()) {
       alert('OpenRouter requires an API key. Please enter your API key or switch to OpenAI.');
@@ -111,6 +120,8 @@ export default function Home() {
   // Fetch available models from the appropriate API
   const fetchAvailableModels = async () => {
     setIsLoadingModels(true);
+    setModelError(''); // Clear any previous errors at the start of the function
+    
     try {
       // Determine API endpoint based on settings
       const endpoint = isOpenRouter 
@@ -129,11 +140,22 @@ export default function Home() {
         }),
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch models');
-      }
-      
       const data = await response.json();
+      
+      if (!response.ok) {
+        // Extract error message from the response if available
+        const errorMessage = data.error || 'Failed to fetch models';
+        console.error('API Error:', errorMessage);
+        setModelError(errorMessage);
+        
+        // Set appropriate error state
+        if (isOpenRouter) {
+          setAvailableModels([{ id: 'custom' }]);
+        } else {
+          setAvailableModels([{ id: 'invalid-api-key' }]);
+        }
+        return;
+      }
       
       // If the API returns an empty list or error, show appropriate message
       if (!data.models || data.models.length === 0) {
@@ -183,6 +205,7 @@ export default function Home() {
       setAvailableModels(filteredModels);
     } catch (error) {
       console.error('Error fetching models:', error);
+      setModelError(error.message || 'Failed to fetch models');
       // Show appropriate error state
       if (isOpenRouter) {
         setAvailableModels([{ id: 'custom' }]);
@@ -191,6 +214,7 @@ export default function Home() {
       }
     } finally {
       setIsLoadingModels(false);
+      // Don't clear error here
     }
   };
 
@@ -1781,7 +1805,12 @@ export default function Home() {
                       <option value="">No models available</option>
                     )}
                   </select>
-                  {selectedModel === 'invalid-api-key' && (
+                  {modelError && (
+                    <div className={styles.modelWarning}>
+                      {modelError}
+                    </div>
+                  )}
+                  {selectedModel === 'invalid-api-key' && !modelError && (
                     <div className={styles.modelWarning}>
                       Unable to fetch models. Please check your API key or try again later.
                     </div>

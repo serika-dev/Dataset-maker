@@ -19,8 +19,8 @@ export async function POST(request) {
         // Return a message that API key is required for OpenRouter
         return NextResponse.json({ 
           models: [],
-          note: 'API key required for OpenRouter. Please provide an API key.'
-        });
+          error: 'API key required for OpenRouter. Please provide an API key.'
+        }, { status: 400 });
       }
 
       try {
@@ -34,7 +34,30 @@ export async function POST(request) {
         });
 
         if (!response.ok) {
-          throw new Error(`OpenRouter API returned ${response.status}`);
+          const responseData = await response.text();
+          let errorMessage = `OpenRouter API returned ${response.status}`;
+          
+          try {
+            // Try to parse the error response as JSON
+            const errorJson = JSON.parse(responseData);
+            if (errorJson.error) {
+              errorMessage = errorJson.error.message || errorJson.error;
+            }
+          } catch (e) {
+            // If parsing fails, use the text response
+            if (responseData) {
+              errorMessage += `: ${responseData}`;
+            }
+          }
+          
+          // Return specific error for 401 Unauthorized
+          if (response.status === 401) {
+            return NextResponse.json({ 
+              error: 'Invalid OpenRouter API key. Please check your API key and try again.'
+            }, { status: 401 });
+          }
+          
+          return NextResponse.json({ error: errorMessage }, { status: response.status });
         }
 
         const data = await response.json();
@@ -47,12 +70,11 @@ export async function POST(request) {
         console.error('Error fetching OpenRouter models:', error);
         return NextResponse.json({
           models: [{ id: 'custom' }],
-          note: `Error fetching models: ${error.message}`
-        });
+          error: `Error fetching models: ${error.message}`
+        }, { status: 500 });
       }
     } else {
-      // OpenAI API models fetch remains the same
-      // ... existing OpenAI code ...
+      // OpenAI API models fetch
       
       if (!apiKeyToUse) {
         // Return a default set of models if no API key is available
@@ -64,20 +86,36 @@ export async function POST(request) {
             { id: 'gpt-4-turbo' },
             { id: 'gpt-4-32k' },
           ],
-          note: 'Using default models list. Please provide an API key for actual models.'
-        });
+          error: 'No API key provided. Using default models list.'
+        }, { status: 400 });
       }
 
-      // Set up OpenAI client with the API key
-      const openai = new OpenAI({
-        apiKey: apiKeyToUse,
-        baseURL: apiEndpoint
-      });
+      try {
+        // Set up OpenAI client with the API key
+        const openai = new OpenAI({
+          apiKey: apiKeyToUse,
+          baseURL: apiEndpoint
+        });
 
-      const response = await openai.models.list();
-      
-      // Return all models
-      return NextResponse.json({ models: response.data });
+        const response = await openai.models.list();
+        
+        // Return all models
+        return NextResponse.json({ models: response.data });
+      } catch (error) {
+        console.error('Error fetching OpenAI models:', error);
+        
+        // Extract the error message
+        let errorMessage = error.message || 'Failed to fetch models';
+        
+        // Check for common API key errors
+        if (error.status === 401 || errorMessage.includes('auth') || errorMessage.includes('key')) {
+          return NextResponse.json({ 
+            error: 'Invalid OpenAI API key. Please check your API key and try again.'
+          }, { status: 401 });
+        }
+        
+        return NextResponse.json({ error: errorMessage }, { status: error.status || 500 });
+      }
     }
   } catch (error) {
     console.error('Error in models endpoint:', error);
