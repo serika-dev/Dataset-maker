@@ -841,6 +841,34 @@
   font-size: 0.875rem;
   font-weight: 500;
   border-left: 3px solid #e63946;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.retryButton {
+  background-color: #f8d7da;
+  border: 1px solid #e63946;
+  color: #e63946;
+  border-radius: var(--rounded);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+  font-weight: 500;
+}
+
+.retryButton:hover:not(:disabled) {
+  background-color: #e63946;
+  color: white;
+}
+
+.retryButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .checkboxLabel {

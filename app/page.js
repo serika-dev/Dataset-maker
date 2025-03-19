@@ -1808,6 +1808,13 @@ export default function Home() {
                   {modelError && (
                     <div className={styles.modelWarning}>
                       {modelError}
+                      <button 
+                        className={styles.retryButton}
+                        onClick={() => fetchAvailableModels()}
+                        disabled={isLoadingModels}
+                      >
+                        {isLoadingModels ? 'Retrying...' : 'Retry'}
+                      </button>
                     </div>
                   )}
                   {selectedModel === 'invalid-api-key' && !modelError && (
