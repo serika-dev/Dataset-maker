@@ -23,6 +23,9 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
   const fileInputRef = useRef(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [submitterName, setSubmitterName] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
 
   // Add mobile detection
   useEffect(() => {
@@ -962,6 +965,60 @@ export default function Home() {
     }
   };
 
+  // Add Google Sheets export function
+  const exportToGoogleSheets = async () => {
+    if (!submitterName.trim()) {
+      setShowNamePrompt(true);
+      return;
+    }
+
+    try {
+      // Set loading state
+      setIsExporting(true);
+      
+      // Prepare data for export
+      const exportData = conversations.map(convo => {
+        return convo.messages.map(msg => ({
+          conversationId: convo.id,
+          speaker: msg.role === 'user' ? 'user' : 'riko',
+          message: msg.content
+        }));
+      }).flat();
+
+      // Send data to our API endpoint
+      const response = await fetch('/api/sheets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: exportData,
+          submitterName
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to export to Google Sheets');
+      }
+
+      // Show success message
+      alert(`Successfully exported ${result.updatedRows || 'data'} to Google Sheets!`);
+      
+      // Close modals
+      setShowExportModal(false);
+      setShowNamePrompt(false);
+      setSubmitterName('');
+    } catch (error) {
+      console.error('Error exporting to Google Sheets:', error);
+      alert('Error exporting to Google Sheets: ' + error.message);
+    } finally {
+      // Reset loading state
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className={styles.container} data-sidebar-hidden={isSidebarVisible}>
       <header className={styles.header}>
@@ -985,35 +1042,12 @@ export default function Home() {
           >
             <span>📥</span> {!isMobile && 'Import JSONL'}
           </button>
-          {isMobile ? (
-            <button 
-              className={styles.exportButton} 
-              onClick={() => setShowExportModal(true)}
-            >
-              <span>📤</span> Export
-            </button>
-          ) : (
-            <>
-              <button 
-                className={styles.exportButton} 
-                onClick={exportConversations}
-              >
-                <span>📄</span> Export as JSONL
-              </button>
-              <button 
-                className={styles.exportButton} 
-                onClick={exportJSON}
-              >
-                <span>⚙️</span> Export JSON
-              </button>
-              <button 
-                className={styles.exportButton} 
-                onClick={exportCSV}
-              >
-                <span>📊</span> Export CSV
-              </button>
-            </>
-          )}
+          <button 
+            className={styles.exportButton} 
+            onClick={() => setShowExportModal(true)}
+          >
+            <span>📤</span> Export
+          </button>
         </div>
       </header>
       
@@ -1421,12 +1455,63 @@ export default function Home() {
                   >
                     <span>📊</span> Export CSV
                   </button>
+                  <button 
+                    className={styles.exportOptionButton}
+                    onClick={() => {
+                      setShowExportModal(false);
+                      setShowNamePrompt(true);
+                    }}
+                  >
+                    <span>📑</span> Export to Google Sheets
+                  </button>
                 </div>
               </div>
               <div className={styles.modalButtons}>
                 <button 
                   className={styles.cancelButton}
                   onClick={() => setShowExportModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Name prompt modal */}
+        {showNamePrompt && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modal}>
+              <h3 className={styles.modalTitle}>
+                Enter Your Name
+              </h3>
+              <div className={styles.modalContent}>
+                <p className={styles.modalText}>
+                  Please enter your name to be credited in the Google Sheet:
+                </p>
+                <input
+                  type="text"
+                  className={styles.systemPromptInput}
+                  value={submitterName}
+                  onChange={(e) => setSubmitterName(e.target.value)}
+                  placeholder="Your name"
+                />
+              </div>
+              <div className={styles.modalButtons}>
+                <button 
+                  className={styles.primaryButton}
+                  onClick={exportToGoogleSheets}
+                  disabled={!submitterName.trim() || isExporting}
+                >
+                  {isExporting ? 'Loading...' : 'Export'}
+                </button>
+                <button 
+                  className={styles.cancelButton}
+                  onClick={() => {
+                    setShowNamePrompt(false);
+                    setSubmitterName('');
+                  }}
+                  disabled={isExporting}
                 >
                   Cancel
                 </button>
