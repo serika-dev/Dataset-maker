@@ -20,7 +20,39 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [importTarget, setImportTarget] = useState('new');
   const [regeneratingMessageId, setRegeneratingMessageId] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
   const fileInputRef = useRef(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+
+  // Add mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+      if (window.innerWidth <= 768) {
+        setIsSidebarVisible(false);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isMobile && isSidebarVisible) {
+        const sidebar = document.querySelector(`.${styles.sidebar}`);
+        const menuButton = document.querySelector(`.${styles.menuButton}`);
+        if (sidebar && !sidebar.contains(event.target) && !menuButton.contains(event.target)) {
+          setIsSidebarVisible(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMobile, isSidebarVisible]);
 
   // Load conversations from localStorage on initial load
   useEffect(() => {
@@ -221,13 +253,10 @@ export default function Home() {
     
     conversations.forEach(convo => {
       // Group messages by conversation
-      const messages = [
-        { role: "system", content: systemPrompt },
-        ...convo.messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }))
-      ];
+      const messages = convo.messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
       
       // Add the conversation as a JSONL entry
       jsonlContent += JSON.stringify({ messages }) + "\n";
@@ -250,9 +279,9 @@ export default function Home() {
     const formattedData = conversations.map(convo => {
       return {
         id: convo.id,
-        conversations: convo.messages.map(msg => ({
-          from: msg.role === 'user' ? 'human' : 'gpt',
-          value: msg.content
+        messages: convo.messages.map(msg => ({
+          role: msg.role,
+          content: msg.content
         }))
       };
     });
@@ -347,13 +376,13 @@ export default function Home() {
   // Export conversations to CSV format
   const exportCSV = () => {
     // Create CSV content
-    let csvContent = "Conversation ID,Role,Content,Timestamp\n";
+    let csvContent = "Conversation ID,Role,Content\n";
     
     conversations.forEach(convo => {
       convo.messages.forEach(msg => {
         // Escape quotes in the message content and wrap in quotes
         const safeContent = msg.content.replace(/"/g, '""');
-        csvContent += `${convo.id},"${msg.role}","${safeContent}","${msg.timestamp || ''}"\n`;
+        csvContent += `${convo.id},"${msg.role}","${safeContent}"\n`;
       });
     });
     
@@ -934,7 +963,7 @@ export default function Home() {
   };
 
   return (
-    <div className={styles.container} data-sidebar-hidden={!isSidebarVisible || undefined}>
+    <div className={styles.container} data-sidebar-hidden={isSidebarVisible}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <button 
@@ -946,7 +975,7 @@ export default function Home() {
           </button>
           <h1>
             <span className={styles.logoIcon}>✨</span> 
-            Rayen AI Training Data
+            {isMobile ? 'Rayen AI' : 'Rayen AI Training Data'}
           </h1>
         </div>
         <div className={styles.exportButtons}>
@@ -954,26 +983,37 @@ export default function Home() {
             className={styles.exportButton} 
             onClick={openImportModal}
           >
-            <span>📥</span> Import JSONL
+            <span>📥</span> {!isMobile && 'Import JSONL'}
           </button>
-          <button 
-            className={styles.exportButton} 
-            onClick={exportConversations}
-          >
-            <span>📄</span> Export as JSONL
-          </button>
-          <button 
-            className={styles.exportButton} 
-            onClick={exportJSON}
-          >
-            <span>⚙️</span> Export JSON
-          </button>
-          <button 
-            className={styles.exportButton} 
-            onClick={exportCSV}
-          >
-            <span>📊</span> Export CSV
-          </button>
+          {isMobile ? (
+            <button 
+              className={styles.exportButton} 
+              onClick={() => setShowExportModal(true)}
+            >
+              <span>📤</span> Export
+            </button>
+          ) : (
+            <>
+              <button 
+                className={styles.exportButton} 
+                onClick={exportConversations}
+              >
+                <span>📄</span> Export as JSONL
+              </button>
+              <button 
+                className={styles.exportButton} 
+                onClick={exportJSON}
+              >
+                <span>⚙️</span> Export JSON
+              </button>
+              <button 
+                className={styles.exportButton} 
+                onClick={exportCSV}
+              >
+                <span>📊</span> Export CSV
+              </button>
+            </>
+          )}
         </div>
       </header>
       
@@ -995,7 +1035,12 @@ export default function Home() {
                 >
                   <div 
                     className={styles.conversationContent}
-                    onClick={() => switchConversation(conversation.id)}
+                    onClick={() => {
+                      switchConversation(conversation.id);
+                      if (isMobile) {
+                        setIsSidebarVisible(false);
+                      }
+                    }}
                   >
                     <div className={styles.conversationHeader}>
                       <span>Conversation {conversation.id}</span>
@@ -1027,7 +1072,12 @@ export default function Home() {
             </div>
             <button 
               className={styles.newConversationButton} 
-              onClick={startNewConversation}
+              onClick={() => {
+                startNewConversation();
+                if (isMobile) {
+                  setIsSidebarVisible(false);
+                }
+              }}
             >
               <span>➕</span> New Conversation
             </button>
@@ -1113,30 +1163,11 @@ export default function Home() {
                         ) : (
                           <div className={styles.messageText}>
                             {msg.content}
-                            <div className={styles.messageActions}>
-                              <button 
-                                className={styles.editButton} 
-                                onClick={() => startEditingMessage(msg)}
-                                aria-label="Edit message"
-                              >
-                                ✏️
-                              </button>
-                              {msg.role === 'assistant' && (
-                                <button
-                                  className={styles.regenButton}
-                                  onClick={() => regenerateMessage(msg.id)}
-                                  disabled={isLoading || regeneratingMessageId === msg.id}
-                                  aria-label="Regenerate response"
-                                >
-                                  {regeneratingMessageId === msg.id ? '⌛' : '🔄'}
-                                </button>
-                              )}
-                              {msg.edited && (
-                                <span className={styles.editedIndicator} title={`Edited on ${msg.editedAt}`}>
-                                  (edited)
-                                </span>
-                              )}
-                            </div>
+                            {msg.edited && (
+                              <span className={styles.editedIndicator} title={`Edited on ${msg.editedAt}`}>
+                                (edited)
+                              </span>
+                            )}
                           </div>
                         )}
                       </td>
@@ -1144,6 +1175,23 @@ export default function Home() {
                         {msg.timestamp || getFormattedDate()}
                       </td>
                       <td className={styles.messageActions}>
+                        <button 
+                          className={styles.editButton} 
+                          onClick={() => startEditingMessage(msg)}
+                          aria-label="Edit message"
+                        >
+                          ✏️
+                        </button>
+                        {msg.role === 'assistant' && (
+                          <button
+                            className={styles.regenButton}
+                            onClick={() => regenerateMessage(msg.id)}
+                            disabled={isLoading || regeneratingMessageId === msg.id}
+                            aria-label="Regenerate response"
+                          >
+                            {regeneratingMessageId === msg.id ? '⌛' : '🔄'}
+                          </button>
+                        )}
                         <button 
                           className={styles.deleteButton}
                           onClick={() => confirmDelete('message', msg.id)}
@@ -1326,6 +1374,59 @@ export default function Home() {
                       fileInputRef.current.value = '';
                     }
                   }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Export modal */}
+        {showExportModal && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modal}>
+              <h3 className={styles.modalTitle}>
+                Export Conversations
+              </h3>
+              <div className={styles.modalContent}>
+                <p className={styles.modalText}>
+                  Choose an export format:
+                </p>
+                <div className={styles.exportOptions}>
+                  <button 
+                    className={styles.exportOptionButton}
+                    onClick={() => {
+                      exportConversations();
+                      setShowExportModal(false);
+                    }}
+                  >
+                    <span>📄</span> Export as JSONL
+                  </button>
+                  <button 
+                    className={styles.exportOptionButton}
+                    onClick={() => {
+                      exportJSON();
+                      setShowExportModal(false);
+                    }}
+                  >
+                    <span>⚙️</span> Export JSON
+                  </button>
+                  <button 
+                    className={styles.exportOptionButton}
+                    onClick={() => {
+                      exportCSV();
+                      setShowExportModal(false);
+                    }}
+                  >
+                    <span>📊</span> Export CSV
+                  </button>
+                </div>
+              </div>
+              <div className={styles.modalButtons}>
+                <button 
+                  className={styles.cancelButton}
+                  onClick={() => setShowExportModal(false)}
                 >
                   Cancel
                 </button>

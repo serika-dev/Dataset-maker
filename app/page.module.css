@@ -6,7 +6,7 @@
 }
 
 .header {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1rem;
   background-color: var(--surface-dark);
   box-shadow: var(--shadow-md);
   display: flex;
@@ -21,7 +21,7 @@
 
 .header h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--primary-light);
   letter-spacing: -0.02em;
@@ -29,11 +29,12 @@
 
 .exportButtons {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .exportButton {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
   background-color: var(--surface-color);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
@@ -59,6 +60,7 @@
   flex: 1;
   height: calc(100vh - 60px);
   overflow: hidden;
+  position: relative;
 }
 
 .sidebar {
@@ -70,6 +72,7 @@
   flex-direction: column;
   flex-shrink: 0;
   position: relative;
+  transition: transform 0.3s ease;
 }
 
 .sidebar h2 {
@@ -301,29 +304,22 @@
 
 .messageText {
   position: relative;
-  padding-right: 4rem;
+  padding-right: 0;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .messageActions {
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.messageText:hover .messageActions {
-  opacity: 1;
+  justify-content: flex-end;
+  min-width: 120px;
 }
 
 .editButton,
-.regenButton {
+.regenButton,
+.deleteButton {
   background: none;
   border: none;
   cursor: pointer;
@@ -331,22 +327,36 @@
   border-radius: var(--rounded);
   transition: all var(--transition);
   opacity: 0.6;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .editButton:hover,
-.regenButton:hover {
+.regenButton:hover,
+.deleteButton:hover {
   opacity: 1;
   background-color: var(--surface-dark);
 }
 
 .editButton:disabled,
-.regenButton:disabled {
+.regenButton:disabled,
+.deleteButton:disabled {
   cursor: not-allowed;
   opacity: 0.3;
 }
 
 .regenButton {
   font-size: 1rem;
+}
+
+.editedIndicator {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+  font-style: italic;
 }
 
 .editContainer {
@@ -581,17 +591,11 @@
   margin-top: 1rem;
 }
 
-.editedIndicator {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-left: 0.5rem;
-  font-style: italic;
-}
-
 .conversationActions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  position: relative;
 }
 
 .deleteConvoButton,
@@ -601,13 +605,15 @@
   color: var(--text-muted);
   cursor: pointer;
   font-size: 0.875rem;
-  padding: 0.25rem 0.375rem;
+  padding: 0.25rem;
   border-radius: var(--rounded);
   opacity: 0.7;
   transition: all var(--transition);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 
 .conversationButton:hover .deleteConvoButton,
@@ -868,4 +874,256 @@
 .formatList strong {
   color: var(--text-primary);
   font-weight: 500;
+}
+
+/* Mobile sidebar styles */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 60px;
+    bottom: 0;
+    transform: translateX(-100%);
+    z-index: 20;
+    width: 85%;
+    max-width: 320px;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  }
+
+  :global([data-sidebar-hidden="true"]) .sidebar {
+    transform: translateX(0);
+  }
+
+  .header {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .header h1 {
+    font-size: 1.125rem;
+  }
+
+  .exportButtons {
+    gap: 0.75rem;
+  }
+
+  .exportButton {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .exportButton span {
+    font-size: 1.25rem;
+  }
+
+  .settings {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .settingField {
+    width: 100%;
+  }
+
+  .inputForm {
+    left: 0;
+    right: 0;
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .messageInput {
+    font-size: 0.875rem;
+    padding: 0.75rem;
+  }
+
+  .sendButton {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .messageTable th:nth-child(3),
+  .messageTable td:nth-child(3) {
+    display: none;
+  }
+
+  .messageTable th,
+  .messageTable td {
+    padding: 0.5rem;
+  }
+
+  .messageActions {
+    opacity: 1;
+  }
+
+  .messageText {
+    padding-right: 3rem;
+  }
+
+  .modal {
+    width: 95%;
+    margin: 1rem;
+    padding: 1rem;
+  }
+
+  .formatList li {
+    font-size: 0.8125rem;
+  }
+
+  .fileUploadContainer {
+    margin: 1rem 0;
+  }
+
+  .fileInputLabel {
+    padding: 1rem;
+  }
+
+  .uploadIcon {
+    font-size: 1.5rem;
+  }
+
+  .uploadText {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Small mobile styles */
+@media (max-width: 480px) {
+  .header {
+    padding: 0.5rem;
+  }
+
+  .header h1 {
+    font-size: 1rem;
+  }
+
+  .exportButtons {
+    gap: 0.5rem;
+  }
+
+  .exportButton {
+    padding: 0.5rem;
+    min-width: 36px;
+    height: 36px;
+  }
+
+  .exportButton span {
+    font-size: 1.125rem;
+  }
+
+  .sidebar {
+    width: 100%;
+    max-width: none;
+  }
+
+  .messageTable {
+    font-size: 0.8125rem;
+  }
+
+  .messageTable th,
+  .messageTable td {
+    padding: 0.375rem;
+  }
+
+  .speakerIcon {
+    font-size: 1rem;
+  }
+
+  .messageTime {
+    font-size: 0.6875rem;
+  }
+
+  .editButton,
+  .regenButton,
+  .deleteButton {
+    padding: 0.125rem;
+    font-size: 0.875rem;
+  }
+
+  .modal {
+    margin: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .modalTitle {
+    font-size: 1.125rem;
+  }
+
+  .modalText {
+    font-size: 0.875rem;
+  }
+
+  .modalButtons {
+    gap: 0.5rem;
+  }
+
+  .deleteConfirmButton,
+  .cancelButton,
+  .primaryButton {
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+  }
+}
+
+.exportOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.exportOptionButton {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background-color: var(--surface-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--rounded-md);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  width: 100%;
+  text-align: left;
+}
+
+.exportOptionButton:hover {
+  background-color: var(--surface-light);
+  border-color: var(--primary-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.exportOptionButton span {
+  font-size: 1.25rem;
+}
+
+/* Mobile styles for export modal */
+@media (max-width: 768px) {
+  .exportOptionButton {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .exportOptionButton span {
+    font-size: 1.125rem;
+  }
+}
+
+/* Small mobile styles */
+@media (max-width: 480px) {
+  .exportOptionButton {
+    padding: 0.625rem;
+    font-size: 0.8125rem;
+  }
+
+  .exportOptionButton span {
+    font-size: 1rem;
+  }
 } 
