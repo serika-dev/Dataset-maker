@@ -134,7 +134,7 @@ export async function POST(request) {
     console.log(`Using sheet ID: ${SPREADSHEET_ID}, GID: ${SHEET_GID}`);
     console.log(`Submitter: ${submitterName}, Data entries: ${data.length}`);
 
-    // Get current sheet data to find the latest conversation ID
+    // Get sheet information to find the correct sheet title
     const response = await sheets.spreadsheets.get({
       spreadsheetId: SPREADSHEET_ID,
       includeGridData: false,
@@ -150,36 +150,74 @@ export async function POST(request) {
     }
     
     const sheetTitle = sheetInfo.properties.title;
-    
-    // Now get the values from the sheet
+
+    // Get current sheet data to find the highest conversation ID
     const valuesResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `'${sheetTitle}'!A:D`,
+      range: `'${sheetTitle}'!A:A`,
     });
 
+    // Find the highest existing conversation ID in the sheet
     const rows = valuesResponse.data.values || [];
-    let latestId = 0;
+    let highestExistingId = 0;
 
-    // Find the latest conversation ID
     for (let i = 1; i < rows.length; i++) {
       if (rows[i] && rows[i][0]) {
         const id = parseInt(rows[i][0]);
-        if (!isNaN(id) && id > latestId) {
-          latestId = id;
+        if (!isNaN(id) && id > highestExistingId) {
+          highestExistingId = id;
         }
       }
     }
 
-    // Prepare data for insertion
-    const values = data.map(msg => {
-      const nextId = latestId + parseInt(msg.conversationId);
-      return [
-        nextId.toString(),
-        msg.speaker,
-        msg.message,
-        submitterName
-      ];
+    console.log(`Highest existing ID in sheet: ${highestExistingId}`);
+
+    // Group data by conversation ID to organize in continuous blocks
+    const dataByConversation = {};
+    data.forEach(msg => {
+      const convId = msg.conversationId;
+      if (!dataByConversation[convId]) {
+        dataByConversation[convId] = [];
+      }
+      dataByConversation[convId].push(msg);
     });
+
+    // Determine if we need to adjust IDs to be higher than existing ones
+    const lowestNewId = Math.min(...Object.keys(dataByConversation).map(id => parseInt(id)));
+    const needsAdjustment = lowestNewId <= highestExistingId && highestExistingId > 0;
+    
+    // Prepare values for insertion, adjusting IDs if needed
+    const values = [];
+    
+    if (needsAdjustment) {
+      console.log(`Adjusting IDs: lowest new ID (${lowestNewId}) <= highest existing ID (${highestExistingId})`);
+      // Create offset to make all new IDs higher than existing ones
+      const idOffset = highestExistingId + 1 - lowestNewId;
+      
+      // Apply the offset to each conversation group
+      Object.entries(dataByConversation).forEach(([originalId, messages]) => {
+        const adjustedId = (parseInt(originalId) + idOffset).toString();
+        
+        messages.forEach(msg => {
+          values.push([
+            adjustedId,
+            msg.speaker,
+            msg.message,
+            submitterName
+          ]);
+        });
+      });
+    } else {
+      // No adjustment needed, use original IDs
+      data.forEach(msg => {
+        values.push([
+          msg.conversationId.toString(),
+          msg.speaker,
+          msg.message,
+          submitterName
+        ]);
+      });
+    }
 
     // Append the data to the sheet
     const appendResponse = await sheets.spreadsheets.values.append({

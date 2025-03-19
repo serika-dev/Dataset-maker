@@ -253,12 +253,57 @@ export default function Home() {
     const savedConversations = localStorage.getItem('conversations');
     if (savedConversations) {
       try {
-        setConversations(JSON.parse(savedConversations));
+        const loadedConversations = JSON.parse(savedConversations);
+        
+        // Normalize conversation IDs to ensure they are sequential starting from 1
+        const normalizedConversations = normalizeConversationIds(loadedConversations);
+        setConversations(normalizedConversations);
+        
+        // Set the current conversation ID to the first conversation
+        // or determine a new ID if no conversations exist
+        if (normalizedConversations.length > 0) {
+          setCurrentConversationId(normalizedConversations[0].id);
+        } else {
+          // No saved conversations, we'll start with ID 1
+          setCurrentConversationId('1');
+        }
       } catch (error) {
         console.error('Error loading saved conversations:', error);
       }
     }
   }, []);
+
+  // Normalize conversation IDs to ensure they are sequential starting from 1
+  const normalizeConversationIds = (conversations) => {
+    if (!conversations || conversations.length === 0) {
+      return [];
+    }
+    
+    // Sort conversations by their numeric ID
+    const sorted = [...conversations].sort((a, b) => {
+      const idA = parseInt(a.id);
+      const idB = parseInt(b.id);
+      return idA - idB;
+    });
+    
+    // Reassign IDs sequentially starting from 1
+    return sorted.map((convo, index) => {
+      const newId = (index + 1).toString();
+      
+      // If the ID has changed, update the currentConversationId if needed
+      if (newId !== convo.id && convo.id === currentConversationId) {
+        // We do this in a setTimeout to avoid state updates during render
+        setTimeout(() => {
+          setCurrentConversationId(newId);
+        }, 0);
+      }
+      
+      return {
+        ...convo,
+        id: newId
+      };
+    });
+  };
 
   // Save conversations to localStorage whenever they change
   useEffect(() => {
@@ -428,8 +473,60 @@ export default function Home() {
   };
 
   const startNewConversation = () => {
-    const newId = (parseInt(currentConversationId) + 1).toString();
-    setCurrentConversationId(newId);
+    // If no conversations exist, start with ID 1
+    if (conversations.length === 0) {
+      const newId = '1';
+      
+      setConversations([{
+        id: newId,
+        messages: [],
+        createdAt: getFormattedDate()
+      }]);
+      
+      setCurrentConversationId(newId);
+      return;
+    }
+    
+    // Check if conversations need normalization (have gaps in IDs)
+    const sortedIds = conversations
+      .map(c => parseInt(c.id))
+      .filter(id => !isNaN(id))
+      .sort((a, b) => a - b);
+    
+    const hasGaps = sortedIds.some((id, index) => id !== index + 1);
+    
+    if (hasGaps) {
+      // Normalize all existing conversation IDs first
+      const normalizedConversations = normalizeConversationIds(conversations);
+      
+      // Create new conversation with the next sequential ID
+      const newId = (normalizedConversations.length + 1).toString();
+      
+      setConversations(prevConversations => [
+        ...normalizedConversations,
+        {
+          id: newId,
+          messages: [],
+          createdAt: getFormattedDate()
+        }
+      ]);
+      
+      setCurrentConversationId(newId);
+    } else {
+      // No gaps, just add a new conversation with the next sequential ID
+      const newId = (sortedIds.length + 1).toString();
+      
+      setConversations(prevConversations => [
+        ...prevConversations,
+        {
+          id: newId,
+          messages: [],
+          createdAt: getFormattedDate()
+        }
+      ]);
+      
+      setCurrentConversationId(newId);
+    }
   };
 
   const switchConversation = (id) => {
@@ -553,17 +650,39 @@ export default function Home() {
 
   // Delete a conversation
   const deleteConversation = (id) => {
-    setConversations(prevConversations => 
-      prevConversations.filter(c => c.id !== id)
-    );
+    // First filter out the conversation to be deleted
+    const remainingConversations = conversations.filter(c => c.id !== id);
+    
+    // Remember the current conversation ID before normalization
+    const currentId = currentConversationId;
+    
+    // If all conversations are being deleted, create a new one with ID 1
+    if (remainingConversations.length === 0) {
+      setConversations([{
+        id: '1',
+        messages: [],
+        createdAt: getFormattedDate()
+      }]);
+      setCurrentConversationId('1');
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
+      return;
+    }
+    
+    // Normalize the IDs of the remaining conversations to ensure sequential ordering
+    const normalizedConversations = normalizeConversationIds(remainingConversations);
+    
+    // Update the conversations state with normalized IDs
+    setConversations(normalizedConversations);
     
     // If we deleted the current conversation, switch to another one
-    if (id === currentConversationId) {
-      const remaining = conversations.filter(c => c.id !== id);
-      if (remaining.length > 0) {
-        setCurrentConversationId(remaining[0].id);
-      } else {
-        startNewConversation();
+    if (id === currentId) {
+      setCurrentConversationId(normalizedConversations[0].id);
+    } else {
+      // If the current conversation's ID changed during normalization, update it
+      const oldConvoIndex = remainingConversations.findIndex(c => c.id === currentId);
+      if (oldConvoIndex >= 0 && normalizedConversations[oldConvoIndex].id !== currentId) {
+        setCurrentConversationId(normalizedConversations[oldConvoIndex].id);
       }
     }
     
@@ -577,6 +696,8 @@ export default function Home() {
       return prevConversations.map(convo => {
         if (convo.id !== currentConversationId) return convo;
         
+        // Filter out the message with the specified ID
+        // but don't modify the conversation ID
         return {
           ...convo,
           messages: convo.messages.filter(msg => msg.id !== messageId)
@@ -986,19 +1107,49 @@ export default function Home() {
           return groups;
         }, {});
 
-        // Create a new conversation for each group
-        const existingIds = conversations.map(c => parseInt(c.id) || 0);
-        let nextId = Math.max(...existingIds, 0) + 1;
+        // Find highest existing conversation ID to ensure new IDs don't conflict
+        let highestId = 0;
+        
+        // First check existing conversations for highest ID
+        if (conversations.length === 0) {
+          highestId = 0; // Start from 0 so first ID will be 1
+        } else {
+          conversations.forEach(conversation => {
+            const id = parseInt(conversation.id);
+            if (!isNaN(id) && id > highestId) {
+              highestId = id;
+            }
+          });
+        }
+        
+        // Then check imported data for numerical IDs
+        Object.keys(groupedData).forEach(groupId => {
+          const numericId = parseInt(groupId);
+          if (!isNaN(numericId) && numericId > highestId) {
+            highestId = numericId;
+          }
+        });
+        
+        let nextId = highestId + 1;
         
         const newConversations = [];
         
         Object.entries(groupedData).forEach(([groupId, items]) => {
-          // If groupId is a number and not an "unidentified" random ID
-          // we use that as conversation ID if it doesn't already exist
+          // Check if this ID already exists in our conversations
           const existingConvo = conversations.find(c => c.id === groupId);
           
+          // Determine if this groupId is a numeric ID (not a random one)
           const isNumericGroupId = !isNaN(parseInt(groupId)) && !groupId.startsWith('unidentified');
-          const newId = isNumericGroupId && !existingConvo ? groupId : (nextId++).toString();
+          
+          // Use the groupId if it's numeric and doesn't conflict
+          // Otherwise use the next available ID
+          let newId;
+          if (isNumericGroupId && !existingConvo) {
+            newId = groupId;
+          } else {
+            newId = nextId.toString();
+            nextId++;
+          }
           
           // Collect system message from any of the conversations in the group
           let systemMessageContent = null;
@@ -1044,10 +1195,28 @@ export default function Home() {
         });
         
         if (newConversations.length > 0) {
-          setConversations(prev => [...prev, ...newConversations]);
+          // First, remember the ID of the first new conversation before normalization
+          const firstNewConvoId = newConversations[0].id;
           
-          // Switch to the first new conversation
-          setCurrentConversationId(newConversations[0].id);
+          // Combine existing and new conversations
+          const updatedConversations = [...conversations, ...newConversations];
+          
+          // Normalize all IDs to ensure they are sequential
+          const normalizedConversations = normalizeConversationIds(updatedConversations);
+          
+          // Update the conversations state
+          setConversations(normalizedConversations);
+          
+          // Find the new normalized ID for the first new conversation
+          // We need to find which conversation in the normalized array corresponds to our first new one
+          const originalIndex = conversations.length; // Index where first new convo would be
+          if (originalIndex < normalizedConversations.length) {
+            // Set current conversation to the normalized ID at that position
+            setCurrentConversationId(normalizedConversations[originalIndex].id);
+          } else {
+            // Fallback - use the first conversation
+            setCurrentConversationId(normalizedConversations[0].id);
+          }
         }
         
         // Display success message
@@ -1234,10 +1403,17 @@ export default function Home() {
       // Set loading state
       setIsExporting(true);
       
-      // Prepare data for export
-      const exportData = conversations.map(convo => {
+      // Sort conversations by ID (lowest to highest) before export
+      const sortedConversations = [...conversations].sort((a, b) => {
+        const idA = parseInt(a.id);
+        const idB = parseInt(b.id);
+        return idA - idB; // Sort from lowest to highest
+      });
+      
+      // Prepare data for export using sorted conversations
+      const exportData = sortedConversations.map(convo => {
         return convo.messages.map(msg => ({
-          conversationId: convo.id,
+          conversationId: convo.id, // Keep original ID
           speaker: msg.role === 'user' ? 'user' : 'riko',
           message: msg.content
         }));
