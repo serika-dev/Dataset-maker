@@ -1020,7 +1020,7 @@ export default function Home() {
   };
 
   return (
-    <div className={styles.container} data-sidebar-hidden={isSidebarVisible}>
+    <div className={styles.container} data-sidebar-hidden={!isSidebarVisible ? "true" : "false"}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <button 

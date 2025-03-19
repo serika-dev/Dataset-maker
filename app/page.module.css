@@ -217,8 +217,8 @@
   transition: left 0.3s ease;
 }
 
-/* Add a modifier class for when sidebar is hidden */
-:global([data-sidebar-hidden]) .inputForm {
+/* When sidebar is hidden, extend input to full width */
+:global([data-sidebar-hidden="true"]) .inputForm {
   left: 0;
 }
 
@@ -890,8 +890,12 @@
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   }
 
-  :global([data-sidebar-hidden="true"]) .sidebar {
+  :global([data-sidebar-hidden="false"]) .sidebar {
     transform: translateX(0);
+  }
+
+  :global([data-sidebar-hidden="true"]) .sidebar {
+    transform: translateX(-100%);
   }
 
   .header {
